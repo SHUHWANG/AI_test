@@ -22,7 +22,7 @@ export const auth = betterAuth({
     'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:3002',
-    /^https:\/\/.*\.edgeone\.cool$/,
+    process.env.BETTER_AUTH_URL ?? '',
     ...(process.env.TRUSTED_ORIGINS ? process.env.TRUSTED_ORIGINS.split(',').map(o => o.trim()) : []),
-  ],
+  ].filter(Boolean),
 });
