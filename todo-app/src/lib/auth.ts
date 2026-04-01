@@ -22,5 +22,6 @@ export const auth = betterAuth({
     'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:3002',
+    'https://aitest-7vwjp23t.edgeone.cool',
   ],
 });
