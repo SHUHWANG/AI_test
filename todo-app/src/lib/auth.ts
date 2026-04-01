@@ -65,11 +65,33 @@ const getSameHostOriginHeader = (
   return undefined;
 };
 
+const getHeaderOrigin = (request?: Request): string | undefined => {
+  if (!request) return undefined;
+  const value = request.headers.get('origin') || request.headers.get('referer');
+  if (!value) return undefined;
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    return undefined;
+  }
+};
+
+const isSameSiteFetch = (request?: Request): boolean => {
+  if (!request) return false;
+  const secFetchSite = request.headers.get('sec-fetch-site')?.toLowerCase();
+  // Some runtimes may not forward this header; treat missing value as same-site.
+  if (!secFetchSite) return true;
+  return secFetchSite === 'same-origin' || secFetchSite === 'same-site' || secFetchSite === 'none';
+};
+
 const envTrustedOrigins = parseCsv(process.env.TRUSTED_ORIGINS);
 
 const trustedOrigins = async (request?: Request): Promise<string[]> => {
   const currentOrigin = getRequestOrigin(request);
   const sameHostOrigin = getSameHostOriginHeader(request, currentOrigin);
+  const headerOrigin = getHeaderOrigin(request);
+  const safeHeaderOrigin = isSameSiteFetch(request) ? headerOrigin : undefined;
 
   return Array.from(
     new Set(
@@ -78,6 +100,7 @@ const trustedOrigins = async (request?: Request): Promise<string[]> => {
         ...envTrustedOrigins,
         currentOrigin,
         sameHostOrigin,
+        safeHeaderOrigin,
       ].filter(Boolean) as string[],
     ),
   );
@@ -100,4 +123,8 @@ export const auth = betterAuth({
   // In production, derive auth URL from each request host so preview domains work automatically.
   baseURL: process.env.NODE_ENV !== 'production' ? process.env.BETTER_AUTH_URL : undefined,
   trustedOrigins,
+  advanced: {
+    // Required behind reverse proxies/CDN (EdgeOne) so host/proto are read from forwarded headers.
+    trustedProxyHeaders: true,
+  },
 });
