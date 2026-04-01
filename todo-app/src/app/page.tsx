@@ -20,5 +20,5 @@ export default async function Home() {
     .where(eq(todos.userId, session.user.id))
     .orderBy(desc(todos.createdAt));
 
-  return <TodoApp initialTodos={userTodos} />;
+  return <TodoApp initialTodos={userTodos} userId={session.user.id} />;
 }

@@ -6,7 +6,7 @@ import type { Todo } from '@/db/schema';
 
 type Filter = 'all' | 'active' | 'done';
 
-export default function TodoApp({ initialTodos }: { initialTodos: Todo[] }) {
+export default function TodoApp({ initialTodos, userId }: { initialTodos: Todo[]; userId: string }) {
   const [optimisticTodos, setOptimisticTodos] = useOptimistic(initialTodos);
   const [filter, setFilter] = useState<Filter>('all');
   const [isPending, startTransition] = useTransition();
@@ -33,7 +33,7 @@ export default function TodoApp({ initialTodos }: { initialTodos: Todo[] }) {
     inputRef.current!.value = '';
     startTransition(async () => {
       setOptimisticTodos(prev => [
-        { id: Date.now(), title: title.trim(), completed: false, createdAt: new Date() },
+        { id: Date.now(), title: title.trim(), completed: false, createdAt: new Date(), userId },
         ...prev,
       ]);
       await addTodo(formData);

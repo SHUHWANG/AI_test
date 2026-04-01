@@ -47,7 +47,7 @@ export default function DashboardClient({
     inputRef.current!.value = '';
     startTransition(async () => {
       setOptimisticTodos(prev => [
-        { id: Date.now(), title: title.trim(), completed: false, createdAt: new Date() },
+        { id: Date.now(), title: title.trim(), completed: false, createdAt: new Date(), userId: user.id },
         ...prev,
       ]);
       await addTodo(formData);
