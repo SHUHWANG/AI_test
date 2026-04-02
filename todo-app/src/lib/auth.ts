@@ -9,12 +9,21 @@ const LOCALHOST_ORIGINS = [
   'http://localhost:3002',
 ];
 
-const parseCsv = (value?: string): string[] => {
+const toOrigin = (value?: string): string | undefined => {
+  if (!value) return undefined;
+  try {
+    return new URL(value).origin;
+  } catch {
+    return undefined;
+  }
+};
+
+const parseOriginCsv = (value?: string): string[] => {
   if (!value) return [];
   return value
     .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
+    .map((item) => toOrigin(item.trim()))
+    .filter(Boolean) as string[];
 };
 
 const pickFirstHeader = (value: string | null): string | undefined => {
@@ -85,7 +94,11 @@ const isSameSiteFetch = (request?: Request): boolean => {
   return secFetchSite === 'same-origin' || secFetchSite === 'same-site' || secFetchSite === 'none';
 };
 
-const envTrustedOrigins = parseCsv(process.env.TRUSTED_ORIGINS);
+const envTrustedOrigins = parseOriginCsv(process.env.TRUSTED_ORIGINS);
+const envConfiguredAppOrigins = [
+  toOrigin(process.env.BETTER_AUTH_URL),
+  toOrigin(process.env.NEXT_PUBLIC_APP_URL),
+].filter(Boolean) as string[];
 
 const trustedOrigins = async (request?: Request): Promise<string[]> => {
   const currentOrigin = getRequestOrigin(request);
@@ -97,6 +110,7 @@ const trustedOrigins = async (request?: Request): Promise<string[]> => {
     new Set(
       [
         ...(process.env.NODE_ENV !== 'production' ? LOCALHOST_ORIGINS : []),
+        ...envConfiguredAppOrigins,
         ...envTrustedOrigins,
         currentOrigin,
         sameHostOrigin,
@@ -120,8 +134,11 @@ export const auth = betterAuth({
     enabled: true,
   },
   secret: process.env.BETTER_AUTH_SECRET!,
-  // In production, derive auth URL from each request host so preview domains work automatically.
-  baseURL: process.env.NODE_ENV !== 'production' ? process.env.BETTER_AUTH_URL : undefined,
+  // In production, prefer explicit public app URL if provided; otherwise derive from request host.
+  baseURL:
+    process.env.NODE_ENV !== 'production'
+      ? process.env.BETTER_AUTH_URL
+      : process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL,
   trustedOrigins,
   advanced: {
     // Required behind reverse proxies/CDN (EdgeOne) so host/proto are read from forwarded headers.
